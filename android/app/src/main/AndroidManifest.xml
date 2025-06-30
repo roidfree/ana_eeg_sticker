@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="ana_eeg_sticker"
+        android:label="ANA"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
