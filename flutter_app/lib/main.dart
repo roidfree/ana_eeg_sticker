@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/home_screen.dart'; // 👈 make sure this file exists
 
 void main() {
   runApp(const ANAApp());
@@ -70,7 +71,7 @@ class WelcomeScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomePage()),
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -93,17 +94,6 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Welcome to the ANA Home Page')),
     );
   }
 }

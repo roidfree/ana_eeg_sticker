@@ -26,6 +26,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - assets/sidebar.png
+    - assets/Settings.png
+    - assets/Home.png
+    - assets/analytics.png
+    - assets/lotus_widget.png
+    - assets/Clock.png
   fonts:
     - family: KronaOne
       fonts:
