@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+class SidebarScreen extends StatelessWidget {
+  const SidebarScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +11,7 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFF3ECDE),
         elevation: 0,
         title: const Text(
-          'Settings',
+          'Menu',
           style: TextStyle(
             fontFamily: 'SFProDisplay',
             fontSize: 20,
@@ -22,7 +22,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: const Center(
         child: Text(
-          'Settings page content goes here',
+          'Sidebar dropdown menu options go here.',
           style: TextStyle(
             fontFamily: 'SFProDisplay',
             fontSize: 16,

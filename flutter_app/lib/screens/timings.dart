@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+class TimingsScreen extends StatelessWidget {
+  const TimingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +11,7 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFF3ECDE),
         elevation: 0,
         title: const Text(
-          'Settings',
+          'Timings',
           style: TextStyle(
             fontFamily: 'SFProDisplay',
             fontSize: 20,
@@ -22,7 +22,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: const Center(
         child: Text(
-          'Settings page content goes here',
+          'Timings and schedule screen.',
           style: TextStyle(
             fontFamily: 'SFProDisplay',
             fontSize: 16,

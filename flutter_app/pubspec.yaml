@@ -36,3 +36,6 @@ flutter:
     - family: KronaOne
       fonts:
         - asset: assets/fonts/KronaOne-Regular.ttf
+    - family: SFProDisplay
+      fonts:
+        - asset: assets/fonts/SFPRODISPLAYREGULAR.otf

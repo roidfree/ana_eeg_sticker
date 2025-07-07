@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'settings_screen.dart';
+import 'sidebar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +18,13 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': 'Mood', 'value': 'Mood \n\n\n 🙂 Mostly positive'},
   ];
 
+  void _navigateTo(Widget page) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,16 +38,29 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset('assets/sidebar.png', height: 30),
+                  // Sidebar button with dropdown menu
+                  PopupMenuButton(
+                    icon: Image.asset('assets/sidebar.png', height: 24, width: 30),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        child: const Text("Menu Option"),
+                        onTap: () => _navigateTo(const SidebarScreen()),
+                      ),
+                    ],
+                  ),
                   const Text(
                     'ANA Home Page',
                     style: TextStyle(
-                      fontFamily: 'KronaOne',
+                      fontFamily: 'SFProDisplay',
                       fontSize: 20,
                       color: Colors.black,
                     ),
                   ),
-                  Image.asset('assets/Settings.png', height: 30),
+                  // Settings button
+                  GestureDetector(
+                    onTap: () => _navigateTo(const SettingsScreen()),
+                    child: Image.asset('assets/Settings.png', height: 30),
+                  ),
                 ],
               ),
             ),
@@ -51,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'So far this week...',
                   style: TextStyle(
-                    fontFamily: 'KronaOne',
+                    fontFamily: 'SFProDisplay',
                     fontSize: 20,
                     letterSpacing: -1,
                     color: Colors.black,
@@ -79,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           stat['value']!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontFamily: 'KronaOne',
+                            fontFamily: 'SFProDisplay',
                             fontSize: 20,
                             color: Colors.black,
                           ),
@@ -90,32 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
-
-            // Bottom Nav
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12, top: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  navIcon('assets/Home.png'),
-                  navIcon('assets/analytics.png'),
-                  navIcon('assets/lotus_widget.png'),
-                  navIcon('assets/Clock.png'),
-                ],
-              ),
-            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget navIcon(String assetPath) {
-    return GestureDetector(
-      onTap: () {
-        // TODO: Handle nav routing here
-      },
-      child: Image.asset(assetPath, height: 36),
     );
   }
 }
