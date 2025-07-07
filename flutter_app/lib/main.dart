@@ -17,7 +17,7 @@ class ANAApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF3ECDE),
-        fontFamily: 'SFProDisplay', // 👈 Global default font
+        fontFamily: 'SFProDisplay',
       ),
       home: const WelcomeScreen(),
     );
