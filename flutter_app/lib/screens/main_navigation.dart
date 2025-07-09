@@ -1,4 +1,3 @@
-// lib/screens/main_navigation.dart
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'analytics_screen.dart';
@@ -31,31 +30,47 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3ECDE),
-      body: SafeArea(child: _pages[_selectedIndex]),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black54,
-        backgroundColor: const Color(0xFFF3ECDE),
         type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFFF3ECDE),
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.grey,
+        iconSize: 28,
         items: [
           BottomNavigationBarItem(
-            icon: Image.asset('assets/Home.png', height: 28),
-            label: '',
+            icon: Image.asset(
+              'assets/Home.png',
+              color: _selectedIndex == 0 ? Colors.black : Colors.grey,
+              height: 28,
+            ),
+            label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Image.asset('assets/analytics.png', height: 28),
-            label: '',
+            icon: Image.asset(
+              'assets/analytics.png',
+              color: _selectedIndex == 1 ? Colors.black : Colors.grey,
+              height: 28,
+            ),
+            label: 'Stats',
           ),
           BottomNavigationBarItem(
-            icon: Image.asset('assets/lotus_widget.png', height: 50, width: 50),
-            label: '',
+            icon: Image.asset(
+              'assets/lotus_widget.png',
+              color: _selectedIndex == 2 ? Colors.black : Colors.grey,
+              height: 36,
+            ),
+            label: 'Meditate',
           ),
           BottomNavigationBarItem(
-            icon: Image.asset('assets/Clock.png', height: 28),
-            label: '',
+            icon: Image.asset(
+              'assets/Clock.png',
+              color: _selectedIndex == 3 ? Colors.black : Colors.grey,
+              height: 28,
+            ),
+            label: 'Timing',
           ),
         ],
       ),
