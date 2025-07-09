@@ -1,0 +1,271 @@
+// lib/pages/cyton_page.dart
+import 'package:flutter/material.dart';
+import 'dart:async';
+import '../services/simple_cyton_service.dart';
+
+class CytonPage extends StatefulWidget {
+  @override
+  _CytonPageState createState() => _CytonPageState();
+}
+
+class _CytonPageState extends State<CytonPage> {
+  final SimpleCytonService _cytonService = SimpleCytonService();
+  
+  String _status = 'Not connected';
+  List<String> _dataLines = [];
+  bool _isConnected = false;
+  bool _isStreaming = false;
+  
+  StreamSubscription<String>? _statusSubscription;
+  StreamSubscription<String>? _dataSubscription;
+  
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupListeners();
+  }
+
+  void _setupListeners() {
+    // Listen to status updates
+    _statusSubscription = _cytonService.statusStream.listen((status) {
+      setState(() {
+        _status = status;
+        _isConnected = _cytonService.isConnected;
+        _isStreaming = _cytonService.isStreaming;
+      });
+    });
+    
+    // Listen to data
+    _dataSubscription = _cytonService.dataStream.listen((data) {
+      setState(() {
+        _dataLines.add('${DateTime.now().toString().substring(11, 23)}: $data');
+        
+        // Keep only last 100 lines
+        if (_dataLines.length > 100) {
+          _dataLines.removeAt(0);
+        }
+      });
+      
+      // Auto-scroll to bottom
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Cyton V3-32 Board'),
+        backgroundColor: Colors.blue,
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Status Card
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Status',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      _status,
+                      style: TextStyle(
+                        color: _isConnected ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            SizedBox(height: 16),
+            
+            // Control Buttons
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Controls',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // Connect/Disconnect
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isConnected ? null : () async {
+                              await _cytonService.connectToCyton();
+                            },
+                            child: Text('Connect'),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: !_isConnected ? null : () async {
+                              await _cytonService.disconnect();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: Text('Disconnect'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // Stream Controls
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (!_isConnected || _isStreaming) ? null : () async {
+                              await _cytonService.startStreaming();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                            ),
+                            child: Text('Start Stream'),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (!_isConnected || !_isStreaming) ? null : () async {
+                              await _cytonService.stopStreaming();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                            ),
+                            child: Text('Stop Stream'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // Reset Button
+                    ElevatedButton(
+                      onPressed: !_isConnected ? null : () async {
+                        await _cytonService.resetBoard();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                      ),
+                      child: Text('Reset Board'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            SizedBox(height: 16),
+            
+            // Data Display
+            Expanded(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Raw Data',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _dataLines.clear();
+                              });
+                            },
+                            child: Text('Clear'),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: _dataLines.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    'No data received yet.\nStart streaming to see data.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  itemCount: _dataLines.length,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.0,
+                                        vertical: 2.0,
+                                      ),
+                                      child: Text(
+                                        _dataLines[index],
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _statusSubscription?.cancel();
+    _dataSubscription?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+}
