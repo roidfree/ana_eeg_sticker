@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'analytics_screen.dart';
 import 'meditation_screen.dart';
 import 'timings.dart';
@@ -59,6 +62,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
+  Future<void> _startSession() async {
+    print('Start session tapped!');
+
+    // Request permissions
+    final bluetoothPermission = await Permission.bluetoothConnect.request();
+    final locationPermission = await Permission.locationWhenInUse.request();
+
+    if (bluetoothPermission.isGranted && locationPermission.isGranted) {
+      final isOn = await FlutterBluePlus.adapterState.first == BluetoothAdapterState.on;
+
+      if (!isOn) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enable Bluetooth manually.")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Bluetooth is already ON!")),
+        );
+        // You can also trigger device scanning or navigation here
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bluetooth or location permission not granted.")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Enlarged Animated Button
+              // Circular Animated "Start Session" Button
               SizedBox(
                 height: 400,
                 width: double.infinity,
@@ -124,9 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: SvgPicture.asset('assets/circle_inner.svg', height: 260),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        print('Start session tapped!');
-                      },
+                      onTap: _startSession,
                       child: SvgPicture.asset('assets/start_text.svg', height: 80),
                     ),
                   ],
@@ -135,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
               const SizedBox(height: 24),
 
-              // Title
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.0),
                 child: Align(
@@ -154,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
               const SizedBox(height: 16),
 
-              // Enlarged Swipable Cards
               SizedBox(
                 height: 300,
                 child: PageView.builder(
