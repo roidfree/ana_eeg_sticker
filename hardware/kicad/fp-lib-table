@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "foots")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/foots.pretty")(options "")(descr "MyProject_Footprints"))
+)
