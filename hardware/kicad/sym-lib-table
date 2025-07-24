@@ -1,4 +1,0 @@
-(sym_lib_table
-  (version 7)
-  (lib (name "EEG components")(type "KiCad")(uri "${KIPRJMOD}/EEG components.kicad_sym")(options "")(descr ""))
-)
