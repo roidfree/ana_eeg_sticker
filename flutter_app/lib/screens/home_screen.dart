@@ -8,6 +8,7 @@ import 'meditation_screen.dart';
 import 'timings.dart';
 import 'settings_screen.dart';
 import 'sidebar_screen.dart';
+import '../services/ble_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _innerController;
 
   final PageController _pageController = PageController();
+  final BLEService _bleService = BLEService();
 
   final List<Map<String, String>> stats = [
     {'title': 'Focus', 'value': '🎯 Average 76% during sessions'},
@@ -63,28 +65,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _startSession() async {
-    print('Start session tapped!');
+    print('[SESSION] Starting session...');
 
-    // Request permissions
     final bluetoothPermission = await Permission.bluetoothConnect.request();
-    final locationPermission = await Permission.locationWhenInUse.request();
 
-    if (bluetoothPermission.isGranted && locationPermission.isGranted) {
-      final isOn = await FlutterBluePlus.adapterState.first == BluetoothAdapterState.on;
+    if (!bluetoothPermission.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bluetooth permission not granted.")),
+      );
+      return;
+    }
 
-      if (!isOn) {
+    // Ensure Bluetooth is ON
+    if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
+      try {
+        await FlutterBluePlus.turnOn();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Turning on Bluetooth...")),
+        );
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Please enable Bluetooth manually.")),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Bluetooth is already ON!")),
-        );
-        // You can also trigger device scanning or navigation here
+        return;
       }
+    }
+
+    // Connect to Cyton
+    final device = await _bleService.scanAndConnectToCyton();
+
+    if (device != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Connected to ${device.name}")),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bluetooth or location permission not granted.")),
+        const SnackBar(content: Text("Cyton board not found.")),
       );
     }
   }
@@ -128,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Circular Animated "Start Session" Button
+              // Animated Start Button
               SizedBox(
                 height: 400,
                 width: double.infinity,
