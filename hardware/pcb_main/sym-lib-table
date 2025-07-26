@@ -8,4 +8,6 @@
   (lib (name "DLF-4_1P6X0P8")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/DLF162500LT-5028A1/DLF-4_1P6X0P8.kicad_sym")(options "")(descr ""))
   (lib (name "FTSH-105-01-L-DV-K")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/LIB_FTSH-105-01-L-DV-K/FTSH-105-01-L-DV-K.kicad_sym")(options "")(descr ""))
   (lib (name "TSM-103-01-L-DH")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/TSM-103-01-L-DH/TSM-103-01-L-DH.kicad_sym")(options "")(descr ""))
+  (lib (name "68710614522")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/68710614522/68710614522.kicad_sym")(options "")(descr ""))
+  (lib (name "1016TR")(type "KiCad")(uri "${KIPRJMOD}/project_specific_foot_sys/1016TR/1016TR.kicad_sym")(options "")(descr ""))
 )
