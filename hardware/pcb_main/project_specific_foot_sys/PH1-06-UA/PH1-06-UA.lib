@@ -1,0 +1,27 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model PH1-06-UA
+#/1646968/1322143/2.50/6/3/Connector
+DEF PH1-06-UA J 0 30 Y Y 1 F N
+F0 "J" 650 300 50 H V L CNN
+F1 "PH1-06-UA" 650 200 50 H V L CNN
+F2 "HDRV6W64P0X254_1X6_1524X250X952P" 650 100 50 H I L CNN
+F3 "https://datasheet.datasheetarchive.com/originals/distributors/Datasheets_SAMA/22522227e000bb8d8f26a3580c1bb98b.pdf" 650 0 50 H I L CNN
+F4 "CONN HEADER VERT 6POS 2.54MM" 650 -100 50 H I L CNN "Description"
+F5 "9.516" 650 -200 50 H I L CNN "Height"
+F6 "737-PH1-06-UA" 650 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Adam-Tech/PH1-06-UA?qs=HoCaDK9Nz5eIYt3TJpOa9Q%3D%3D" 650 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Adam Tech" 650 -500 50 H I L CNN "Manufacturer_Name"
+F9 "PH1-06-UA" 650 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X 1 1 0 0 200 R 50 50 0 0 P
+X 2 2 0 -100 200 R 50 50 0 0 P
+X 3 3 0 -200 200 R 50 50 0 0 P
+X 4 4 0 -300 200 R 50 50 0 0 P
+X 5 5 0 -400 200 R 50 50 0 0 P
+X 6 6 0 -500 200 R 50 50 0 0 P
+P 5 0 1 6 200 100 600 100 600 -600 200 -600 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

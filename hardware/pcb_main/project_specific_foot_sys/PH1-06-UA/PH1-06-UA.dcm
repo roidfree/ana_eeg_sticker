@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP PH1-06-UA
+D CONN HEADER VERT 6POS 2.54MM
+K
+F https://datasheet.datasheetarchive.com/originals/distributors/Datasheets_SAMA/22522227e000bb8d8f26a3580c1bb98b.pdf
+$ENDCMP
+#
+#End Doc Library
