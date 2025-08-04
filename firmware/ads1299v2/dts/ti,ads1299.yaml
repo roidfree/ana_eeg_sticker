@@ -1,0 +1,42 @@
+description: |
+  Texas Instruments ADS1299 - 8-channel, 24-bit, biopotential ADC
+compatible: "ti,ads1299"
+on-bus: spi
+properties:
+  reg:
+    type: int
+    required: true
+    description: Chip select address on the SPI bus
+
+  spi-max-frequency:
+    type: int
+    required: true
+    description: Maximum SPI clock frequency in Hz
+
+  spi-cpha:
+    type: boolean
+    description: SPI clock phase (Mode 1 for ADS1299)
+
+  full-duplex:
+    type: boolean
+    description: Device requires full-duplex SPI transfers
+
+  cs-gpios:
+    type: phandle-array
+    required: true
+    description: Chip select GPIO
+
+  drdy-gpios:
+    type: phandle-array
+    required: true
+    description: Data Ready (DRDY) interrupt GPIO
+
+  reset-gpios:
+    type: phandle-array
+    required: false
+    description: Optional reset GPIO for hardware reset
+
+  label:
+    type: string
+    required: false
+    description: Human-readable label for the device
