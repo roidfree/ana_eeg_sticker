@@ -1,0 +1,79 @@
+// To get started, press Ctrl+Space to bring up the completion menu and view the available nodes.
+
+// You can also use the buttons in the sidebar to perform actions on nodes.
+// Actions currently available include:
+
+// * Enabling / disabling the node
+// * Adding the bus to a bus
+// * Removing the node
+// * Connecting ADC channels
+
+// For more help, browse the DeviceTree documentation at https://docs.zephyrproject.org/latest/guides/dts/index.html
+// You can also visit the nRF DeviceTree extension documentation at https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/guides/ncs_configure_app.html#devicetree-support-in-the-extension
+&spi0 {
+    compatible  =  "nordic,nrf-spim";
+    status      =   "okay";
+    pinctrl-0   =   <&spi0_default>;
+    pinctrl-1   =   <&spi0_sleep>;
+    pinctrl-names = "default", "sleep";
+    ads1299: ads1299@0 {
+        compatible = "ti,ads1299";
+        reg = <0>;
+        full-duplex;
+        spi-max-frequency = <4000000>;
+        cs-gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
+        drdy-gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
+        reset-gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
+    };
+};
+
+&pinctrl {
+    spi0_default_pins: spi0_default{
+        group1{
+            psels = <NRF_PSEL(SPIM_SCK, 0 , 13)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 14)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 15)>;
+        };
+    };
+
+    spi0_sleep_pins: spi0_sleep{
+        group1{
+            psels = <NRF_PSEL(SPIM_SCK, 0 ,13)>,
+                    <NRF_PSEL(SPIM_MISO, 0, 14)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 15)>;
+        };
+    };
+};
+
+&button0 {
+    status = "disabled";
+};
+
+&button1 {
+    status = "disabled";
+};
+
+&button2 {
+    status = "disabled";
+};
+
+&button3 {
+    status = "disabled";
+};
+
+&pwm0 {
+    status = "disabled";
+};
+
+&led0 {
+    status = "disabled";
+};
+
+&led1 {
+    status = "disabled";
+};
+
+&i2c0 {
+    status = "disabled";
+};
+

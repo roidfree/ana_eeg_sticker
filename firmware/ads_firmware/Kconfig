@@ -1,0 +1,5 @@
+source "Kconfig.zephyr"  
+
+config ADS1299
+bool "Enable my function"
+default n
