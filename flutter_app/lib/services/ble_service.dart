@@ -1,70 +1,92 @@
+// lib/services/ble_service.dart
+
+// ignore_for_file: deprecated_member_use, avoid_print
+
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BLEService {
-  static const String cytonBoardName = "OpenBCI-Cyton"; // Adjust this if your board shows a different name
+  BluetoothDevice? _device;
+  late BluetoothCharacteristic _txChar;
+  late BluetoothCharacteristic _rxChar;
+  final _eegController = StreamController<List<double>>.broadcast();
 
-  Future<BluetoothDevice?> scanAndConnectToCyton() async {
-    print("[BLE] Starting scan...");
+  /// Stream of 4-channel EEG samples (~26 Hz)
+  Stream<List<double>> get eegStream => _eegController.stream;
 
-    // Disconnect any previously connected devices
-    List<BluetoothDevice> connectedDevices = await FlutterBluePlus.connectedDevices;
-    for (var device in connectedDevices) {
-      await device.disconnect();
-    }
+  // Nordic UART Service & Characteristics UUIDs
+  static final Guid _svcUuid = Guid("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+  static final Guid _txUuid  = Guid("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
+  static final Guid _rxUuid  = Guid("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
 
-    final Completer<BluetoothDevice?> completer = Completer();
-    late StreamSubscription<List<ScanResult>> subscription;
+  /// Scan for [timeout] and return all unique ScanResults.
+  Future<List<ScanResult>> scan({Duration timeout = const Duration(seconds: 5)}) async {
+    final Map<String, ScanResult> results = {};
 
-    subscription = FlutterBluePlus.scanResults.listen((List<ScanResult> results) async {
-      for (ScanResult result in results) {
-        if (result.device.platformName.contains(cytonBoardName)) {
-          print("[BLE] Found Cyton Board: ${result.device.platformName}");
+    // 1) Start scanning for any device
+    FlutterBluePlus.startScan(timeout: timeout);
 
-          await FlutterBluePlus.stopScan();
-          await subscription.cancel();
-
-          try {
-            await result.device.connect(autoConnect: false);
-            print("[BLE] Connected to ${result.device.platformName}");
-
-            List<BluetoothService> services = await result.device.discoverServices();
-            for (var service in services) {
-              print('Service: ${service.uuid}');
-              for (var characteristic in service.characteristics) {
-                print('  Characteristic: ${characteristic.uuid}');
-
-                if (characteristic.properties.notify) {
-                  print("[BLE] Subscribing to characteristic ${characteristic.uuid}");
-
-                  await characteristic.setNotifyValue(true);
-                  characteristic.lastValueStream.listen((value) {
-                    print("[EEG STREAM] Raw bytes: $value");
-                  });
-                }
-              }
-            }
-
-            completer.complete(result.device);
-          } catch (e) {
-            print("[BLE] Failed to connect or subscribe: $e");
-            completer.complete(null);
-          }
-
-          break;
-        }
+    // 2) Collect results (deduplicated by device ID)
+    final sub = FlutterBluePlus.scanResults.listen((rList) {
+      for (final r in rList) {
+        results[r.device.id.id] = r;
       }
     });
 
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+    // 3) Wait for scan to finish then stop
+    await Future.delayed(timeout);
+    FlutterBluePlus.stopScan();
+    await sub.cancel();
 
-    final BluetoothDevice? connectedDevice = await completer.future;
+    return results.values.toList();
+  }
 
-    if (!completer.isCompleted) {
-      await subscription.cancel();
-      await FlutterBluePlus.stopScan();
+  /// Connects to [device], subscribes to UART TX, writes start byte to RX.
+  Future<bool> connectDevice(BluetoothDevice device) async {
+    try {
+      // 1) Connect
+      await device.connect(autoConnect: false);
+      _device = device;
+
+      // 2) Discover services
+      final svcs = await device.discoverServices();
+      final uartService = svcs.firstWhere((s) => s.uuid == _svcUuid);
+
+      // 3) Locate TX & RX characteristics
+      _txChar = uartService.characteristics.firstWhere((c) => c.uuid == _txUuid);
+      _rxChar = uartService.characteristics.firstWhere((c) => c.uuid == _rxUuid);
+
+      // 4) Enable notifications on TX
+      await _txChar.setNotifyValue(true);
+      _txChar.value.listen(_handleData);
+
+      // 5) Send “start streaming” command to RX
+      await _rxChar.write([0x01], withoutResponse: false);
+
+      return true;
+    } catch (e) {
+      print("BLE connectDevice error: $e");
+      return false;
     }
+  }
 
-    return connectedDevice;
+  /// Parses each 8-byte notification into four 16-bit LE samples → doubles.
+  void _handleData(List<int> raw) {
+    if (raw.length < 8) return;
+    final bd = ByteData.sublistView(Uint8List.fromList(raw));
+    final sample = List<double>.generate(4, (i) {
+      return bd.getInt16(i * 2, Endian.little).toDouble();
+    });
+    _eegController.add(sample);
+  }
+
+  /// Disconnects from device and closes the stream.
+  Future<void> disconnect() async {
+    if (_device != null) {
+      await _txChar.setNotifyValue(false);
+      await _device!.disconnect();
+    }
+    await _eegController.close();
   }
 }

@@ -1,6 +1,5 @@
 // lib/screens/welcome_screen.dart
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
 import 'main_navigation.dart';
 
 

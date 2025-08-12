@@ -1,31 +1,30 @@
+// lib/screens/main_navigation.dart
+
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'analytics_screen.dart';
 import 'meditation_screen.dart';
 import 'timings.dart';
+import '../services/ble_service.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
-
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  final BLEService _bleService = BLEService();
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    AnalyticsScreen(),
-    MeditationScreen(),
-    TimingsScreen(),
+  late final List<Widget> _pages = [
+    const HomeScreen(),
+    AnalyticsScreen(eegStream: _bleService.eegStream),
+    const MeditationScreen(),
+    const TimingsScreen(),
   ];
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
