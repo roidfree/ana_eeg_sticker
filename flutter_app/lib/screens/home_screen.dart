@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously, unused_import
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,6 +9,8 @@ import '../services/ble_service.dart';
 import 'analytics_screen.dart';
 import 'settings_screen.dart';
 import 'sidebar_screen.dart';
+import '../services/app_services.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  final BLEService _bleService = BLEService();
+  final BLEService _bleService = AppServices.ble;
 
   late AnimationController _outerController,
       _middleController,
