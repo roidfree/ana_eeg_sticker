@@ -48,7 +48,7 @@
         "silk_text_thickness": 0.1,
         "silk_text_upright": false,
         "zones": {
-          "min_clearance": 0.5
+          "min_clearance": 0.4
         }
       },
       "diff_pair_dimensions": [
@@ -536,43 +536,17 @@
       {
         "bus_width": 12,
         "line_style": 0,
-        "name": "EEG",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 1,
-        "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "wire_width": 6
-      },
-      {
-        "bus_width": 12,
-        "line_style": 0,
-        "name": "GND",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "name": "AVSS",
+        "pcb_color": "rgb(194, 194, 194)",
         "priority": 2,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "wire_width": 6
       },
       {
         "bus_width": 12,
-        "name": "GPIO",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 0,
-        "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "wire_width": 6
-      },
-      {
-        "bus_width": 12,
         "line_style": 0,
-        "name": "PWR",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 3,
-        "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "wire_width": 6
-      },
-      {
-        "bus_width": 12,
-        "line_style": 0,
-        "name": "RF",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "name": "DGND",
+        "pcb_color": "rgb(132, 132, 132)",
         "priority": 5,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "wire_width": 6
@@ -580,9 +554,64 @@
       {
         "bus_width": 12,
         "line_style": 0,
-        "name": "SPI",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "name": "EEG",
+        "pcb_color": "rgb(255, 153, 0)",
         "priority": 4,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "GPIO",
+        "pcb_color": "rgb(0, 0, 255)",
+        "priority": 3,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "PWR",
+        "pcb_color": "rgb(255, 0, 0)",
+        "priority": 6,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "RF",
+        "pcb_color": "rgb(255, 255, 0)",
+        "priority": 8,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.2,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "SMPS",
+        "pcb_color": "rgb(255, 0, 255)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "SPI",
+        "pcb_color": "rgb(0, 194, 0)",
+        "priority": 7,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "line_style": 0,
+        "name": "SWD",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "wire_width": 6
       }
@@ -606,7 +635,7 @@
         "pattern": "/GPIO*"
       },
       {
-        "netclass": "GND",
+        "netclass": "DGND",
         "pattern": "GND"
       },
       {
@@ -618,8 +647,16 @@
         "pattern": "+*"
       },
       {
-        "netclass": "PWR",
+        "netclass": "AVSS",
         "pattern": "-*"
+      },
+      {
+        "netclass": "SWD",
+        "pattern": "/SW*"
+      },
+      {
+        "netclass": "SMPS",
+        "pattern": "/SMPS*"
       }
     ]
   },

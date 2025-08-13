@@ -9359,7 +9359,7 @@
 		)
 		(uuid "76220275-f37f-4a51-88e7-b649a1160101")
 	)
-	(label "DRDY"
+	(label "SPI_DRDY"
 		(at 204.47 232.41 0)
 		(effects
 			(font
@@ -9389,7 +9389,7 @@
 		)
 		(uuid "826cd001-edfc-4bab-ab08-b435824eae97")
 	)
-	(label "RESET"
+	(label "SPI_RESET"
 		(at 203.2 260.35 0)
 		(effects
 			(font
@@ -9558,6 +9558,16 @@
 			(justify left bottom)
 		)
 		(uuid "ca873da3-0c40-436b-9670-6910f8fbd89d")
+	)
+	(label "EEGBIASINV"
+		(at 203.2 199.39 270)
+		(effects
+			(font
+				(size 0.7 0.7)
+			)
+			(justify right bottom)
+		)
+		(uuid "ce3f4082-b41d-40e8-a1d5-61e27e03437e")
 	)
 	(label "EEG4"
 		(at 80.01 209.55 0)
