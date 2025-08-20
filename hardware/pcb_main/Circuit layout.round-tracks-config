@@ -1,0 +1,11 @@
+Default	True	2.0	3
+AVSS	True	2.0	3
+DGND	True	2.0	3
+EEG	True	2.0	3
+GPIO	True	2.0	3
+PWR	True	2.0	3
+RF	True	2.0	3
+SMPS	True	2.0	3
+SPI	True	2.0	3
+SWD	True	2.0	3
+False	True	False

@@ -1,4 +1,4 @@
-26447268153648243
+26449028937327628
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -105637,6 +105637,13 @@ Inductor
 2
 2
 foots
+BAT30F4
+BAT30F4-1
+Diode
+0
+2
+2
+foots
 DLF162500LT-5028A1
 
 
@@ -105655,8 +105662,8 @@ LM27761DSGT
 
 
 0
-11
-11
+9
+9
 foots
 NRF52832-QFAA-R
 
