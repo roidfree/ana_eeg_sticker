@@ -255,22 +255,6 @@
 		(solder_mask_margin 0.102)
 		(uuid "6da74cf7-09f6-4561-b4bc-1fbf211711e4")
 	)
-	(pad "9_1" thru_hole circle
-		(at 0 -0.55)
-		(size 0.4 0.4)
-		(drill 0.2)
-		(layers "*.Cu")
-		(remove_unused_layers no)
-		(uuid "5f6312d7-691b-4fa3-9e42-9c17e4f70a78")
-	)
-	(pad "9_2" thru_hole circle
-		(at 0 0.55)
-		(size 0.4 0.4)
-		(drill 0.2)
-		(layers "*.Cu")
-		(remove_unused_layers no)
-		(uuid "3d6b70a5-4f85-48a2-bf55-37bd6b23fe4e")
-	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/project_specific_foot_sys/LM27761DSGT/LM27761DSGT.step"
 		(offset
