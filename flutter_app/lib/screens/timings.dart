@@ -558,16 +558,16 @@ class _TimingsScreenState extends State<TimingsScreen> {
 
     return Column(
       children: [
-        // calendar grid reduced height so event list is larger and sits higher
+        // ✅ increase calendar grid height
         Flexible(
-          flex: 2,
+          flex: 3, // was 2
           child: GridView.builder(
             physics: const ClampingScrollPhysics(),
             itemCount: monthDays.length + leadingEmpty,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
+              mainAxisSpacing: 4, // slightly more spacing
+              crossAxisSpacing: 4, // slightly more spacing
             ),
             itemBuilder: (ctx, index) {
               if (index < leadingEmpty) {
@@ -620,9 +620,9 @@ class _TimingsScreenState extends State<TimingsScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        // larger event list area
+        // ✅ slightly smaller event list
         Flexible(
-          flex: 3,
+          flex: 2, // was 3
           child: _buildDayView(),
         ),
       ],

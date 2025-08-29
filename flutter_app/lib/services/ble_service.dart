@@ -135,7 +135,7 @@ class BLEService {
 
   // ---------- Analyzer state ----------
   static const int _channels = 4;
-  static const int _minFs = 20;
+  static const int _minFs = 200;
   static const int _maxFs = 512;
 
   final List<List<double>> _minuteBuf = <List<double>>[];

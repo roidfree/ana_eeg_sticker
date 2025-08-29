@@ -1,68 +1,88 @@
 // lib/services/eeg_recorder.dart
-// ignore_for_file: unintended_html_in_doc_comment, unused_local_variable
+// ignore_for_file: unused_local_variable, unintended_html_in_doc_comment
 
 import 'dart:async';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Buffers a 4-channel EEG stream (List<double> of length 4)
-/// and saves a CSV every minute (1560 samples at 26 Hz).
+/// Buffers a 4-channel EEG stream (List<double> length 4) and saves a CSV
+/// every 60 seconds based on timestamps. Robust to any sampling rate.
 class EEGRecorder {
-  EEGRecorder({
-    required this.eegStream,
-    this.fs = 256.0,
-  });
+  EEGRecorder({required this.eegStream, Duration chunkLength = const Duration(seconds: 60)})
+      : _chunkLen = chunkLength;
 
   final Stream<List<double>> eegStream;
-  final double fs;
 
   StreamSubscription<List<double>>? _sub;
-  final List<_Row> _buffer = [];
-  int _samplesPerMinute = 0;
+  final List<_Row> _rows = [];
+
+  DateTime? _chunkStart;
+  final Duration _chunkLen;
 
   final _savedFilesController = StreamController<File>.broadcast();
   Stream<File> get savedFiles => _savedFilesController.stream;
 
+  bool _flushing = false;
   bool get isRecording => _sub != null;
 
+  /// Start buffering the incoming samples. Each time 60s elapse since the first
+  /// sample of a chunk, a CSV is written and emitted on [savedFiles].
   Future<void> start() async {
     if (_sub != null) return;
-    _samplesPerMinute = (60 * fs).round(); // 1560 at 26 Hz
 
-    _sub = eegStream.listen((ch) async {
-      if (ch.length != 4) return;
-      _buffer.add(_Row(DateTime.now().toUtc(), ch[0], ch[1], ch[2], ch[3]));
+    _sub = eegStream.listen((sample) async {
+      if (sample.length != 4) return;
 
-      if (_buffer.length >= _samplesPerMinute) {
-        final f = await _flushToCsv(_buffer);
-        _buffer.clear();
-        _savedFilesController.add(f);
+      final now = DateTime.now().toUtc();
+      _rows.add(_Row(now, sample[0], sample[1], sample[2], sample[3]));
+      _chunkStart ??= now;
+
+      // If we've reached the chunk length, flush to CSV.
+      if (!_flushing && now.difference(_chunkStart!).abs() >= _chunkLen) {
+        _flushing = true;
+        try {
+          final file = await _flushToCsv(_rows);
+          _rows.clear();
+          _chunkStart = null;
+          _savedFilesController.add(file);
+        } finally {
+          _flushing = false;
+        }
       }
     });
   }
 
-  /// Stops and flushes (if anything remains) to a final CSV.
+  /// Stop recording and flush any remaining partial chunk to a CSV.
   Future<File?> stop() async {
     await _sub?.cancel();
     _sub = null;
-    if (_buffer.isEmpty) return null;
-    final f = await _flushToCsv(_buffer);
-    _buffer.clear();
-    _savedFilesController.add(f);
-    return f;
+
+    if (_rows.isEmpty) return null;
+
+    _flushing = true;
+    try {
+      final file = await _flushToCsv(_rows);
+      _rows.clear();
+      _chunkStart = null;
+      _savedFilesController.add(file);
+      return file;
+    } finally {
+      _flushing = false;
+    }
   }
 
   Future<File> _flushToCsv(List<_Row> rows) async {
     final dir = await getApplicationDocumentsDirectory();
     final start = rows.first.t;
     final end = rows.last.t;
-    final stamp = DateFormat("yyyyMMdd_HHmmss").format(start);
-    final file = File("${dir.path}/eeg_${stamp}_${rows.length}samples.csv");
 
-    final sb = StringBuffer();
-    // header
-    sb.writeln("timestamp_utc,ch1,ch2,ch3,ch4");
+    final stamp = DateFormat("yyyyMMdd_HHmmss").format(start);
+    final path = "${dir.path}/eeg_${stamp}_${rows.length}samples.csv";
+    final file = File(path);
+
+    final sb = StringBuffer()
+      ..writeln("timestamp_utc,ch1,ch2,ch3,ch4");
     for (final r in rows) {
       sb.writeln("${r.t.toIso8601String()},${r.c1},${r.c2},${r.c3},${r.c4}");
     }

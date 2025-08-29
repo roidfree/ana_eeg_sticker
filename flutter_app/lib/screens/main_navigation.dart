@@ -9,27 +9,48 @@ import '../services/ble_service.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
+
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+
+  // ✅ Shared instance of BLEService
   final BLEService _bleService = BLEService();
 
+  // ✅ Keep pages alive with IndexedStack
   late final List<Widget> _pages = [
-    const HomeScreen(),
-    AnalyticsScreen(eegStream: _bleService.eegStream),
+    HomeScreen(
+      onStartSession: _switchToAnalytics, // pass callback
+      bleService: _bleService,
+    ),
+    AnalyticsScreen(
+      eegStream: _bleService.eegStream,
+      focusSeriesStream: _bleService.focusSeriesStream,
+      stressSeriesStream: _bleService.stressSeriesStream,
+    ),
     const MeditationScreen(),
     const TimingsScreen(),
   ];
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
+  // ✅ Method to switch to Analytics tab
+  void _switchToAnalytics() {
+    setState(() {
+      _selectedIndex = 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
