@@ -26,11 +26,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   final List<List<FlSpot>> _channels = List.generate(4, (_) => []);
   late StreamSubscription<List<double>> _sub;
   Timer? _uiTimer;
-  Timer? _noneStateTimer; // Timer for inserting None states
+
+  // Minute tick aligned to wall clock
+  Timer? _minuteTickTimer;
 
   List<double> _focusScores = [];
-  List<double> _stressScores = [];
   List<DateTime> _focusTimestamps = [];
+  List<double> _stressScores = [];
   List<DateTime> _stressTimestamps = [];
   List<String> _minuteLabels = [];
 
@@ -43,7 +45,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   late final int _t0;
   late SharedPreferences _prefs;
-  DateTime _lastBLEData = DateTime.now(); // Track last BLE data received
+
+  // Streaming guards
+  DateTime _lastBLEData = DateTime.now();
+  final Set<DateTime> _bleActiveMinutes = <DateTime>{};
 
   @override
   bool get wantKeepAlive => true;
@@ -55,9 +60,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     _initPrefsAndLoadData();
 
     _sub = widget.eegStream.listen((sample) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final seconds = (now - _t0) / 1000.0;
-      _lastBLEData = DateTime.now(); // Update last BLE data timestamp
+      final now = DateTime.now();
+      final seconds = (now.millisecondsSinceEpoch - _t0) / 1000.0;
+      _lastBLEData = now;
+
+      // Mark current minute active, and also previous minute to protect boundary jitter
+      final currM = _minuteFloor(now);
+      final prevM = currM.subtract(const Duration(minutes: 1));
+      _bleActiveMinutes.add(currM);
+      _bleActiveMinutes.add(prevM);
 
       for (int i = 0; i < 4; i++) {
         final ch = _channels[i];
@@ -70,55 +81,143 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       if (mounted) setState(() {});
     });
 
-    // Timer to insert None states every minute when no BLE data
-    _noneStateTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      _insertNoneStateIfNeeded();
-    });
+    _scheduleNextMinuteTick();
 
     widget.focusSeriesStream.listen((series) {
-      if (mounted) {
-        final now = DateTime.now();
-        _lastBLEData = now; // Update last BLE data timestamp
-        setState(() {
-          _focusScores.addAll(series);
-          _focusTimestamps.addAll(List.generate(series.length, (_) => now));
-          _refreshLabels();
-          _saveData();
-        });
-      }
+      if (!mounted) return;
+      final now = DateTime.now();
+      _lastBLEData = now;
+      setState(() {
+        for (final v in series) {
+          final coerced = _coerceBinary(v);
+          _addOrReplaceByMinute(_focusScores, _focusTimestamps, coerced, now);
+        }
+        _refreshLabels();
+        _saveData();
+      });
     });
 
     widget.stressSeriesStream.listen((series) {
-      if (mounted) {
-        final now = DateTime.now();
-        _lastBLEData = now; // Update last BLE data timestamp
-        setState(() {
-          _stressScores.addAll(series);
-          _stressTimestamps.addAll(List.generate(series.length, (_) => now));
-          _refreshLabels();
-          _saveData();
-        });
-      }
+      if (!mounted) return;
+      final now = DateTime.now();
+      _lastBLEData = now;
+      setState(() {
+        for (final v in series) {
+          final coerced = _coerceBinary(v);
+          _addOrReplaceByMinute(_stressScores, _stressTimestamps, coerced, now);
+        }
+        _refreshLabels();
+        _saveData();
+      });
     });
   }
 
-  void _insertNoneStateIfNeeded() {
-    final now = DateTime.now();
-    final timeSinceLastBLE = now.difference(_lastBLEData);
-    
-    // If more than 1 minute has passed since last BLE data, insert None state (-1)
-    if (timeSinceLastBLE.inMinutes >= 1) {
-      if (mounted) {
-        setState(() {
-          _focusScores.add(-1); // -1 represents "None" state
-          _stressScores.add(-1);
-          _focusTimestamps.add(now);
-          _stressTimestamps.add(now);
-          _refreshLabels();
-          _saveData();
-        });
-      }
+  // ---------- helpers ----------
+  DateTime _minuteFloor(DateTime t) =>
+      DateTime(t.year, t.month, t.day, t.hour, t.minute);
+
+  void _addOrReplaceByMinute(
+      List<double> scores, List<DateTime> times, double value, DateTime t) {
+    final m = _minuteFloor(t);
+    if (times.isNotEmpty && _minuteFloor(times.last) == m) {
+      scores[scores.length - 1] = value;
+      times[times.length - 1] = m;
+    } else {
+      scores.add(value);
+      times.add(m);
     }
+  }
+
+  double _coerceBinary(double v) {
+    if (v == -1) return -1;
+    return v >= 0.5 ? 1 : 0;
+  }
+
+  bool _hasEntryForMinute(List<DateTime> times, DateTime m) {
+    if (times.isNotEmpty && _minuteFloor(times.last) == m) return true;
+    for (final t in times) {
+      if (_minuteFloor(t) == m) return true;
+    }
+    return false;
+  }
+
+  bool _isStreamingActive() {
+    // consider streaming active if we saw BLE within the last 15s
+    return DateTime.now().difference(_lastBLEData) <
+        const Duration(seconds: 15);
+  }
+
+  void _backfillNoneStatesUpToNow() {
+    final nowM = _minuteFloor(DateTime.now());
+
+    DateTime? lastFocus =
+        _focusTimestamps.isNotEmpty ? _minuteFloor(_focusTimestamps.last) : null;
+    DateTime? lastStress =
+        _stressTimestamps.isNotEmpty ? _minuteFloor(_stressTimestamps.last) : null;
+
+    DateTime? lastAny;
+    if (lastFocus == null) {
+      lastAny = lastStress;
+    } else if (lastStress == null) {
+      lastAny = lastFocus;
+    } else {
+      lastAny = lastFocus.isAfter(lastStress) ? lastFocus : lastStress;
+    }
+    if (lastAny == null) return;
+
+    var cursor = lastAny.add(const Duration(minutes: 1));
+    while (!cursor.isAfter(nowM)) {
+      // only backfill None if we did NOT have EEG that minute
+      if (!_bleActiveMinutes.contains(cursor)) {
+        _addOrReplaceByMinute(_focusScores, _focusTimestamps, -1, cursor);
+        _addOrReplaceByMinute(_stressScores, _stressTimestamps, -1, cursor);
+      }
+      cursor = cursor.add(const Duration(minutes: 1));
+    }
+  }
+
+  void _scheduleNextMinuteTick() {
+    final now = DateTime.now();
+    final nextMinute = DateTime(now.year, now.month, now.day, now.hour, now.minute)
+        .add(const Duration(minutes: 1));
+    final nextFire = nextMinute.add(const Duration(seconds: 3)); // grace
+    final delay = nextFire.difference(now);
+
+    _minuteTickTimer?.cancel();
+    _minuteTickTimer = Timer(delay, () {
+      _processMinuteBoundaryTick();
+      _scheduleNextMinuteTick();
+    });
+  }
+
+  void _processMinuteBoundaryTick() {
+    // decide about the minute that just ended
+    final prevMinute =
+        _minuteFloor(DateTime.now().subtract(const Duration(minutes: 1)));
+
+    final eegWasActive = _bleActiveMinutes.contains(prevMinute);
+    final focusHasEntry = _hasEntryForMinute(_focusTimestamps, prevMinute);
+    final stressHasEntry = _hasEntryForMinute(_stressTimestamps, prevMinute);
+
+    // If streaming is active OR EEG was active in that minute → never insert None
+    if (_isStreamingActive() || eegWasActive) {
+      // nothing to do; analyzer/UI will fill the point or we leave it blank
+    } else if (mounted && (!focusHasEntry || !stressHasEntry)) {
+      setState(() {
+        if (!focusHasEntry) {
+          _addOrReplaceByMinute(_focusScores, _focusTimestamps, -1, prevMinute);
+        }
+        if (!stressHasEntry) {
+          _addOrReplaceByMinute(_stressScores, _stressTimestamps, -1, prevMinute);
+        }
+        _refreshLabels();
+        _saveData();
+      });
+    }
+
+    // cleanup: keep last ~2h of EEG markers
+    final cutoff = DateTime.now().subtract(const Duration(hours: 2));
+    _bleActiveMinutes.removeWhere((m) => m.isBefore(cutoff));
   }
 
   void clearEEGData() {
@@ -133,7 +232,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear Focus Data'),
-        content: const Text('Are you sure you want to clear all focus data? This will replace all recorded states with "None" (inactive).'),
+        content: const Text(
+            'Are you sure you want to clear all focus data? This will replace all recorded states with "None" (inactive).'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -153,7 +253,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     if (confirmed == true) {
       setState(() {
-        // Replace all focus scores with -1 (None state)
         for (int i = 0; i < _focusScores.length; i++) {
           _focusScores[i] = -1;
         }
@@ -168,7 +267,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear Stress Data'),
-        content: const Text('Are you sure you want to clear all stress data? This will replace all recorded states with "None" (inactive).'),
+        content: const Text(
+            'Are you sure you want to clear all stress data? This will replace all recorded states with "None" (inactive).'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -188,7 +288,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     if (confirmed == true) {
       setState(() {
-        // Replace all stress scores with -1 (None state)
         for (int i = 0; i < _stressScores.length; i++) {
           _stressScores[i] = -1;
         }
@@ -215,12 +314,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
     if (focusTimeJson != null) {
       final List<dynamic> stored = jsonDecode(focusTimeJson);
-      _focusTimestamps = stored.map((e) => DateTime.parse(e as String)).toList();
+      _focusTimestamps =
+          stored.map((e) => DateTime.parse(e as String)).toList();
     }
     if (stressTimeJson != null) {
       final List<dynamic> stored = jsonDecode(stressTimeJson);
-      _stressTimestamps = stored.map((e) => DateTime.parse(e as String)).toList();
+      _stressTimestamps =
+          stored.map((e) => DateTime.parse(e as String)).toList();
     }
+
+    // Snap to minute and (from now on) protect active minutes
+    _focusTimestamps = _focusTimestamps.map(_minuteFloor).toList();
+    _stressTimestamps = _stressTimestamps.map(_minuteFloor).toList();
+
+    _backfillNoneStatesUpToNow();
 
     _refreshLabels();
     if (mounted) setState(() {});
@@ -229,20 +336,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   void _saveData() {
     _prefs.setString('analytics_focus_scores', jsonEncode(_focusScores));
     _prefs.setString('analytics_stress_scores', jsonEncode(_stressScores));
-    _prefs.setString('analytics_focus_timestamps',
-        jsonEncode(_focusTimestamps.map((e) => e.toIso8601String()).toList()));
-    _prefs.setString('analytics_stress_timestamps',
-        jsonEncode(_stressTimestamps.map((e) => e.toIso8601String()).toList()));
+    _prefs.setString(
+        'analytics_focus_timestamps',
+        jsonEncode(
+            _focusTimestamps.map((e) => e.toIso8601String()).toList()));
+    _prefs.setString(
+        'analytics_stress_timestamps',
+        jsonEncode(
+            _stressTimestamps.map((e) => e.toIso8601String()).toList()));
   }
 
   void _refreshLabels() {
-    List<DateTime> timestamps = _focusTimestamps
+    final timestamps = _focusTimestamps
         .where((t) =>
             (_focusFilterStart == null || !t.isBefore(_focusFilterStart!)) &&
             (_focusFilterEnd == null || !t.isAfter(_focusFilterEnd!)))
         .toList();
     _minuteLabels = timestamps
-        .map((t) => "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}")
+        .map((t) =>
+            "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}")
         .toList();
   }
 
@@ -256,7 +368,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
     if (start == null) return;
 
-    TimeOfDay? startTime = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    TimeOfDay? startTime =
+        await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (startTime == null) return;
 
     DateTime? end = await showDatePicker(
@@ -267,13 +380,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
     if (end == null) return;
 
-    TimeOfDay? endTime = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    TimeOfDay? endTime =
+        await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (endTime == null) return;
 
     setState(() {
-      final startDateTime = DateTime(start.year, start.month, start.day, startTime.hour, startTime.minute);
-      final endDateTime = DateTime(end.year, end.month, end.day, endTime.hour, endTime.minute);
-      
+      final startDateTime = DateTime(start.year, start.month, start.day,
+          startTime.hour, startTime.minute);
+      final endDateTime = DateTime(
+          end.year, end.month, end.day, endTime.hour, endTime.minute);
+
       if (type == "EEG") {
         _eegFilterStart = startDateTime;
         _eegFilterEnd = endDateTime;
@@ -290,8 +406,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   List<DateTime> _generateMinuteTicks(DateTime start, DateTime end) {
-    List<DateTime> ticks = [];
-    DateTime current = DateTime(start.year, start.month, start.day, start.hour, start.minute);
+    final ticks = <DateTime>[];
+    var current =
+        DateTime(start.year, start.month, start.day, start.hour, start.minute);
     while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
       ticks.add(current);
       current = current.add(const Duration(minutes: 1));
@@ -303,7 +420,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   void dispose() {
     _sub.cancel();
     _uiTimer?.cancel();
-    _noneStateTimer?.cancel();
+    _minuteTickTimer?.cancel();
     super.dispose();
   }
 
@@ -334,7 +451,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text("Live Raw EEG",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 TextButton(
                   onPressed: () => _pickFilter(context, "EEG"),
                   child: const Text("Filter"),
@@ -343,65 +461,71 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: LineChart(
-                LineChartData(
-                  minX: minX,
-                  maxX: maxX,
-                  minY: minY,
-                  maxY: maxY,
-                  gridData: FlGridData(show: true),
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (v, _) {
-                          final millis = _t0 + (v * 1000).toInt();
-                          final t = DateTime.fromMillisecondsSinceEpoch(millis);
-                          final label =
-                              "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')}";
-                          return Text(label, style: const TextStyle(fontSize: 10));
-                        },
-                      ),
-                    ),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                child: LineChart(LineChartData(
+              minX: minX,
+              maxX: maxX,
+              minY: minY,
+              maxY: maxY,
+              gridData: FlGridData(show: true),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles:
+                      SideTitles(showTitles: true, reservedSize: 40),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    getTitlesWidget: (v, _) {
+                      final millis = _t0 + (v * 1000).toInt();
+                      final t =
+                          DateTime.fromMillisecondsSinceEpoch(millis);
+                      final label =
+                          "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')}";
+                      return Text(label,
+                          style: const TextStyle(fontSize: 10));
+                    },
                   ),
-                  lineBarsData: List.generate(4, (i) {
-                    final colors = [Colors.blue, Colors.red, Colors.green, Colors.purple];
-                    return LineChartBarData(
-                      spots: _channels[i],
-                      isCurved: false,
-                      color: colors[i],
-                      dotData: FlDotData(show: false),
-                      barWidth: 2,
-                    );
-                  }),
-                  borderData: FlBorderData(show: true),
-
-                  // 👇 NEW tooltip section
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((spot) {
-                          final millis = _t0 + (spot.x * 1000).toInt();
-                          final t = DateTime.fromMillisecondsSinceEpoch(millis);
-                          final timeLabel =
-                              "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
-                          return LineTooltipItem(
-                            timeLabel,
-                            const TextStyle(color: Colors.black),
-                          );
-                        }).toList();
-                      },
-                    ),
-                  ),
-                )
+                ),
+                topTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
-            ),
+              lineBarsData: List.generate(4, (i) {
+                final colors = [
+                  Colors.blue,
+                  Colors.red,
+                  Colors.green,
+                  Colors.purple
+                ];
+                return LineChartBarData(
+                  spots: _channels[i],
+                  isCurved: false,
+                  color: colors[i],
+                  dotData: FlDotData(show: false),
+                  barWidth: 2,
+                );
+              }),
+              borderData: FlBorderData(show: true),
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      final millis = _t0 + (spot.x * 1000).toInt();
+                      final t =
+                          DateTime.fromMillisecondsSinceEpoch(millis);
+                      final timeLabel =
+                          "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+                      return LineTooltipItem(
+                        timeLabel,
+                        const TextStyle(color: Colors.black),
+                      );
+                    }).toList();
+                  },
+                ),
+              ),
+            ))),
           ],
         ),
       ),
@@ -417,46 +541,44 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       String highLabel,
       Color lowColor,
       Color highColor) {
-    
-    // Get appropriate filter variables based on chart type
-    DateTime? filterStart = title == "Focus" ? _focusFilterStart : _stressFilterStart;
-    DateTime? filterEnd = title == "Focus" ? _focusFilterEnd : _stressFilterEnd;
-    
-    // Create filtered data with None states preserved
+    final filterStart =
+        title == "Focus" ? _focusFilterStart : _stressFilterStart;
+    final filterEnd =
+        title == "Focus" ? _focusFilterEnd : _stressFilterEnd;
+
     List<double> filteredData = [];
     List<DateTime> filteredTimestamps = [];
-    
-    // Filter existing data based on timestamp ranges
+
     for (int i = 0; i < data.length && i < timestamps.length; i++) {
       final timestamp = timestamps[i];
       bool includePoint = true;
-      
+
       if (filterStart != null && timestamp.isBefore(filterStart)) {
         includePoint = false;
       }
       if (filterEnd != null && timestamp.isAfter(filterEnd)) {
         includePoint = false;
       }
-      
+
       if (includePoint) {
         filteredData.add(data[i]);
         filteredTimestamps.add(timestamp);
       }
     }
-    
-    // If no data matches the filter or no data exists at all, generate minute ticks for the range
+
     if (filteredData.isEmpty) {
       final now = DateTime.now();
       final start = filterStart ?? now.subtract(const Duration(hours: 1));
       final end = filterEnd ?? now;
       final ticks = _generateMinuteTicks(start, end);
-      
-      filteredData = List.filled(ticks.length, -1.0); // All None states
+
+      filteredData = List.filled(ticks.length, -1.0);
       filteredTimestamps = ticks;
     }
 
     final labels = filteredTimestamps
-        .map((t) => "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}")
+        .map((t) =>
+            "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}")
         .toList();
 
     return SizedBox(
@@ -480,7 +602,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     ),
                     const SizedBox(width: 8),
                     TextButton(
-                      onPressed: title == "Focus" ? _clearFocusData : _clearStressData,
+                      onPressed: title == "Focus"
+                          ? _clearFocusData
+                          : _clearStressData,
                       child: const Text("Clear Data"),
                     ),
                   ],
@@ -492,7 +616,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               child: LineChart(
                 LineChartData(
                   minX: 0,
-                  maxX: filteredData.isEmpty ? 1 : (filteredData.length - 1).toDouble(),
+                  maxX: filteredData.isEmpty
+                      ? 1
+                      : (filteredData.length - 1).toDouble(),
                   minY: 0,
                   maxY: 1,
                   gridData: FlGridData(show: false),
@@ -505,7 +631,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         getTitlesWidget: (value, _) {
                           if ((value - 0.2).abs() < 0.01) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 6),
                               child: Transform.rotate(
                                 angle: -1.5708,
                                 child: Text(lowLabel,
@@ -516,7 +643,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             );
                           } else if ((value - 0.5).abs() < 0.01) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 6),
                               child: Transform.rotate(
                                 angle: -1.5708,
                                 child: const Text("None",
@@ -527,7 +655,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             );
                           } else if ((value - 0.8).abs() < 0.01) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 6),
                               child: Transform.rotate(
                                 angle: -1.5708,
                                 child: Text(highLabel,
@@ -547,13 +676,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         interval: 1,
                         getTitlesWidget: (v, _) {
                           final idx = v.toInt();
-                          if (idx < 0 || idx >= labels.length) return const SizedBox();
-                          return Text(labels[idx], style: const TextStyle(fontSize: 10));
+                          if (idx < 0 || idx >= labels.length) {
+                            return const SizedBox();
+                          }
+                          return Text(labels[idx],
+                              style: const TextStyle(fontSize: 10));
                         },
                       ),
                     ),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: true),
                   lineBarsData: [
@@ -563,10 +697,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           FlSpot(
                               i.toDouble(),
                               filteredData[i] == -1
-                                  ? 0.5 // None state
+                                  ? 0.5
                                   : filteredData[i] == 1
                                       ? 0.8
-                                      : 0.2), // High/Low states
+                                      : 0.2),
                       ],
                       isCurved: false,
                       color: Colors.black,
@@ -575,11 +709,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         show: true,
                         getDotPainter: (spot, percent, bar, idx) {
                           Color dotColor;
-                          if (idx < filteredData.length && filteredData[idx] == -1) {
-                            dotColor = Colors.grey; // None state
+                          if (idx < filteredData.length &&
+                              filteredData[idx] == -1) {
+                            dotColor = Colors.grey;
                           } else {
-                            final isHigh =
-                                idx < filteredData.length && filteredData[idx] == 1;
+                            final isHigh = idx < filteredData.length &&
+                                filteredData[idx] == 1;
                             dotColor = isHigh ? highColor : lowColor;
                           }
                           return FlDotCirclePainter(
@@ -608,8 +743,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       ),
                     ],
                   ),
-
-                  // 👇 NEW tooltip section
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipItems: (touchedSpots) {
@@ -626,7 +759,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       },
                     ),
                   ),
-                )
+                ),
               ),
             ),
           ],
