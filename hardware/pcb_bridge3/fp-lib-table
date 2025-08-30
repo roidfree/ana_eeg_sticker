@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "foots")(type "KiCad")(uri "C:/Users/dillo/Documents/ana_eeg_sticker/hardware/pcb_main/project_specific_foot_sys/foots.pretty")(options "")(descr ""))
+)

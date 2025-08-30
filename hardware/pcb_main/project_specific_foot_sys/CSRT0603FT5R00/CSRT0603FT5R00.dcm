@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP CSRT0603FT5R00
+D Current Sense Resistors - SMD 5Ohms 0603 0.4W 50 ppm 1% Thin Film CS
+K
+F https://www.seielect.com/catalog/sei-csrt.pdf
+$ENDCMP
+#
+#End Doc Library

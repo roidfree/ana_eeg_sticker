@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TPS613222ADBVT
+D Switching Voltage Regulators 6-uA Quiescent Current, 1.8-A Switch Current Boost Converter 5-SOT-23 -40 to 85
+K
+F http://www.ti.com/lit/ds/symlink/tps61322.pdf
+$ENDCMP
+#
+#End Doc Library

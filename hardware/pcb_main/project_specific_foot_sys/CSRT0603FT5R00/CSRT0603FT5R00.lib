@@ -1,0 +1,23 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model CSRT0603FT5R00
+#/18674302/1322143/2.50/2/3/Resistor
+DEF CSRT0603FT5R00 R 0 30 Y Y 1 F N
+F0 "R" 550 250 50 H V L CNN
+F1 "CSRT0603FT5R00" 550 150 50 H V L CNN
+F2 "RESC1608X55N" 550 50 50 H I L CNN
+F3 "https://www.seielect.com/catalog/sei-csrt.pdf" 550 -50 50 H I L CNN
+F4 "Current Sense Resistors - SMD 5Ohms 0603 0.4W 50 ppm 1% Thin Film CS" 550 -150 50 H I L CNN "Description"
+F5 "0.55" 550 -250 50 H I L CNN "Height"
+F6 "" 550 -350 50 H I L CNN "Mouser Part Number"
+F7 "" 550 -450 50 H I L CNN "Mouser Price/Stock"
+F8 "Stackpole Electronics, Inc." 550 -550 50 H I L CNN "Manufacturer_Name"
+F9 "CSRT0603FT5R00" 550 -650 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X ~ 1 0 0 200 R 50 50 0 0 P
+X ~ 2 700 0 200 L 50 50 0 0 P
+P 5 0 1 6 200 50 500 50 500 -50 200 -50 200 50 N
+ENDDRAW
+ENDDEF
+#
+#End Library
