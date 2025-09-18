@@ -3,7 +3,6 @@
 - .overlay files, describe the physical pin assignments for gpios on the IC.
 - .yaml files, describe the functions of driver in a human readable context, these are found under dts/bindings/spi.
 - prj.conf describes the configuration for each project enabling different functions
-- build folder contains the compiled build, do not touch anything in these folders
 # Log of firmware code 
 - spi_loopback - test for spi gpios working ✅
 - random_data_ble_setup - test for bluetooth setup with simulated eeg values ✅
