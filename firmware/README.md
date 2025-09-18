@@ -1,7 +1,7 @@
 # Description of code
 - src folder in each folder contains main.c, this is the code being carried out. It may also contain ads1299.c and ads1299.h which both are descriptions of the ads1299 driver and its functions.
 - .overlay files, describe the physical pin assignments for gpios on the IC.
-- .yaml files, describe the functions of driver in a human readable context.
+- .yaml files, describe the functions of driver in a human readable context, these are found under dts/bindings/spi.
 - prj.conf describes the configuration for each project enabling different functions
 - build folder contains the compiled build, do not touch anything in these folders
 # Log of firmware code 
